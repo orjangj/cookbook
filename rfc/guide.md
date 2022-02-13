@@ -1,22 +1,31 @@
-A Guide to Writing Request for Comment's (RFCs)
-===============================================
+A Guide to Writing RFCs
+=======================
 
-This article has been inspired by mutiple great sources on writing Request for Comments (RFCs):
-- [A Practical Guide to Writing a Software Technical Design Document](https://medium.com/swlh/a-practical-guide-to-writing-a-software-technical-design-document-c6f4d865ccff).
-- [RFC Driven Development](https://medium.com/@donbonifacio/rfc-driven-development-dc9695f9e622)
-
-> Disclaimer: This guide represent my personal preference on writing technical design documents.
+> Disclaimer: This guide represent my personal preference on writing technical design documents or RFCs.
 
 > TL;DR: Use the following [template](https://github.com/orjangj/cookbook/) to start writing your RFCs.
+
+Accronyms
+---------
+
+- TDR - Technical Design Review
+- RFC - Request for Comment
+
+Introduction
+------------
+
+During the lifetime of a software project, developers will be faced with having to make design decisions for a particular feature or problem that arises during software development. At first, a developer might already know how to solve the problem. However, when feature or problem affects multiple stakeholders, an RFC should be used to drive clarity and concensus. An RFC, if used correctly, can be a great tool for a team of developers to systematically and critically form concrete ideas of how to solve a problem, and then go for the solution that best fits the goals and requirements.
+
+Usually, we know RFCs as a tool used by [IETF](https://www.ietf.org/) to write technical specifications. In this article however, RFCs is used in a broader sense. You can view it as a lightweight technical design document that is primarely used as a tool for driving  decision making... reaching concencus between stakeholders.
 
 The purpose of RFCs
 -------------------
 
-Usually, we know RFCs as a tool used by [IETF](https://www.ietf.org/) to write technical specifications. In this document however, RFCs is used in a broader sense. You can view it as a lightweight lightweight technical design document, primarely used as a tool for driving ... decision making... reaching concencus between stakeholders.
 
-During the lifetime of a software project, developers will be faced with having to make design decisions for a particular feature or problem that arises during software development. ....At first, a developer's design solution may surface ....  However, when feature or problem at hand affects multiple stakeholders, an RFC should be used to drive clarity and concensus. An RFC, if used correctly, can be a great tool for a team of developers to systematically and critically form concrete ideas of how to solve a problem.
 
-The process for proposing a change in writing is the same whether you’re a junior employee or a company founder, and you’ll get to present it directly to your colleagues rather than relying on word-of-mouth.
+
+
+The process for proposing a set of solutions to a problem is the same whether you’re a junior employee or a company founder, and you’ll get to present it directly to your colleagues rather than relying on word-of-mouth.
 
 In my experience as an embedded software developer, the use of RFCs has been a deciding factor on numerous occasions in making timely and well thought-through decisions. This is due to the ... critical thinking and ... analysis of proposed options.
 
@@ -28,10 +37,22 @@ It's important to understand that RFCs is not a silver bullet, and will not alwa
 
 It provides a common ground for collaboration between "owner" and stakeholders... and is a tool for communicating intent and ....
 
+Other benefits of using RFCs include:
+* Inter-org communication
+* Onboarding new engineers. Due to the format and process of doing RFCs it's easier for new engineers to follow the thought-process of why a particular solution was chosen.
+* Productive contribution. Design reviews make it easier for a whole range of engineers to contribute thoughts towards a design.
+
+
 Downsides of RFCs
 -----------------
 
-Creating RFCs takes time and may clash with other processes enforced by your team or company. There's also the questions of "When to do an RFC? All the time? Even for smaller problems?", "How much time should be invested in doing an RFC? An hour? A week?", or "Who reviews the RFC? All the team? Managers? How long to wait for feedback, and do all need to approve the design solution for the RFC to be accepted?". Time is precious, so it's not always clear that RFCs is the right tool for the job. Sometimes the RFC owner and reviewers are going in circles because of feedback, and it's hard to get closure.
+Creating RFCs takes time to write, to review and to discuss, and may clash with other processes enforced by your team or company. It's evident that doing RFCs come at a cost, so you should be mindful of when to invest in a TDR.
+
+To help mitigate ambiguities, Before starting with TDRs, ....... your team (or company) should have some preliminary idea of "When to do a TDR? All the time? Even for smaller problems?", "How much time should be invested in doing a TDR? An hour? A week?", NS
+There's also the questions of "When to do an RFC? All the time? Even for smaller problems?", "How much time should be invested in doing an RFC? An hour? A week?", or "Who reviews the RFC? All the team? Managers? How long to wait for feedback, and do all need to approve the design solution for the RFC to be accepted?". Time is precious, so it's not always clear that RFCs is the right tool for the job. Sometimes the RFC owner and reviewers are going in circles because of feedback, and it's hard to get closure.
+
+However, there is some leftover ambiguity concerning when exactly we want (or even require) a feature to undergo a TDR.
+
 
 Sometimes, an RFC might be tightly coupled to other parts of software that is outside the responsibility of the RFC owner. This means that changes to those other parts, may yield unexpected problems during writing of the RFC or shortly thereafter. Even worse, it may even make the RFC obsolete, thus wasting precious time. For agile-paced teams, this is not an unrealistic situation.
 
@@ -116,3 +137,10 @@ The RFC should begin with a brief overveiw - a table - that describes the featur
 **Conclusion**
 **Action Points**
 **References**
+
+## References
+
+- [Strengthening Products and Teams with Technical Design Reviews](https://medium.com/git-out-the-vote/strengthening-products-and-teams-with-technical-design-reviews-ae6a1bec5216)
+- [A Practical Guide to Writing a Software Technical Design Document](https://medium.com/swlh/a-practical-guide-to-writing-a-software-technical-design-document-c6f4d865ccff).
+- [RFC Driven Development](https://medium.com/@donbonifacio/rfc-driven-development-dc9695f9e622)
+- [RFCs: Lightweight Technical Designs](https://medium.com/caspertechteam/rfcs-lightweight-technical-designs-a508d93ccd34)
