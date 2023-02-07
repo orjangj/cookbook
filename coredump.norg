@@ -1,0 +1,54 @@
+@document.meta
+title: coredump
+description: 
+authors: og
+categories: 
+created: 2022-10-13
+updated: 2022-10-13
+version: 0.0.15
+@end
+
+= TOC
+
+* Apport
+
+  Crash reports can be found in /var/crash
+
+  To dump the crash report to a some other folder, simply execute
+
+  TODO - wrap in code block
+  apport-unpack /var/crash/_usr_bin_<program>.<uid>.crash SomeNonExistingDirectory
+
+  Then you can i.e. use gdb to debug the crash.
+
+  gdb /usr/bin/<program> SomeNonExistingDirectory/Coredump
+
+  > Note that apport doesn't overwrite crash report should you trigger the same crash
+  > again. You will most likely have to delete the crash report before a new one can
+  > be generated. (TODO verify)
+
+* Configuring the kernel to dump coredumps relative to current working directory
+
+  This will allow creating coredumps of any size (note however that it maye have implications) 
+  ulimit -c unlimited
+
+  To check what the current core pattern is:
+
+  sysctl kernel.core_pattern
+
+  Example: kernel.core_pattern = |/usr/share/apport/apport -p%p -s%s -c%c -d%d -P%P -u%u -g%g -- %E
+
+  To create a custom core pattern which will dump the core file to your current directory:
+
+  sudo bash -c 'echo "%t.%e.core.%p" > /proc/sys/kernel/core_pattern'
+
+  or
+
+  sudo bash -c 'echo "coredump" > /proc/sys/kernel/core_pattern'
+
+  The latter example will overwrite the "coredump" each time a coredump is produced.
+
+  Verify with `sysctl kernel.core_pattern` again.
+
+  > Note that such changes are only temporary. On next boot, the core pattern will be changed back
+  > to the default pattern.
