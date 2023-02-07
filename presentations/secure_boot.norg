@@ -1,0 +1,334 @@
+@document.meta
+title: Secure Boot Introduction
+description: An introduction to Secure Boot for embedded systems
+authors: og
+categories: Security
+created: 2023-01-12
+updated: 2023-02-01
+version: 0.0.1
+@end
+
+= TOC
+
+* Secure Boot Introduction
+** Outline of this talk
+
+   - Bootloaders
+   - Secure Boot
+   - Root of Trust
+   - Digital Signatures
+   - Final words
+
+** Audience
+
+   This is an introduction to Secure Boot, and should be useful to most
+   embedded developers.
+
+** Disclaimer
+
+   I have experience with developing Secure Boot solutions for ARM-based
+   architectures for the past 2-3 years, but I'm not a security expert.
+
+* Bootloaders - The Boot Process
+  >  .----------------- Boot sequence examples ------------------.
+  >  :                                                           :
+  >  :    Initial                                                :
+  >  :  .---------.      .----.                                  :
+  >  :  : bootROM : ---> : OS :                                  :
+  >  :  '---------'      '----'                                  :
+  >  :                                                           :
+  >  :    Initial                                                :
+  >  :  .---------.      .-----------.      .----.               :
+  >  :  : bootROM : ---> : OS loader : ---> : OS :               :
+  >  :  '---------'      '-----------'      '----'               :
+  >  :                                                           :
+  >  :    Initial        Stage 1         Stage 2                 :
+  >  :  .---------.      .-----.      .-----------.      .----.  :
+  >  :  : bootROM : ---> : SPL : ---> : OS loader : ---> : OS :  :
+  >  :  '---------'      '-----'      '-----------'      '----'  :
+  >  :                                                           :
+  >  '-----------------------------------------------------------'
+
+  The main purpose of bootloaders is to prepare hardware and the
+  environment on which the Operating System (or main application)
+  runs on.
+
+* Bootloaders - bootROM
+  >  .-----------------------------------------------------------.
+  >  :                                                           :
+  >  :    Initial                                                :
+  >  :  .---------.      .---.                                   :
+  >  :  : bootROM : ---> : ? :                                   :
+  >  :  '---------'      '---'                                   :
+  >  :                                                           :
+  >  '-----------------------------------------------------------'
+
+  - Primary bootloader
+  - First significant code that runs on an embedded device after power-on/reset
+  - Implemented by the vendor
+  - Immutable
+  - Capabilities varies from processors to processors
+  - Performs initial hardware setup before transitioning control
+
+* Bootloaders - OS Loader
+  >  .-----------------------------------------------------------.
+  >  :                                                           :
+  >  :    Initial                                                :
+  >  :  .---------.      .-----------.      .----.               :
+  >  :  : bootROM : ---> : OS loader : ---> : OS :               :
+  >  :  '---------'      '-----------'      '----'               :
+  >  :                                                           :
+  >  '-----------------------------------------------------------'
+
+  - Performs additional hardware setup
+  - Responsible for loading and starting the OS
+  - Mutable by default (can be updated)
+  - Can support more complex requirements
+  -- Load the OS from external non-volatile memory
+  -- Support different communication channels (serial, network)
+  -- Implement interactive shell
+  -- etc..
+* Bootloaders - Secondary Program Loader (SPL)
+  >  .-----------------------------------------------------------.
+  >  :                                                           :
+  >  :    Initial        Stage 1         Stage 2                 :
+  >  :  .---------.      .-----.      .-----------.      .----.  :
+  >  :  : bootROM : ---> : SPL : ---> : OS loader : ---> : OS :  :
+  >  :  '---------'      '-----'      '-----------'      '----'  :
+  >  :                                                           :
+  >  '-----------------------------------------------------------'
+
+   - Performs additional hardware setup (i.e. external RAM)
+   - Usually required on processors capable of supporting i.e. embedded linux
+   - A minimal implementation that fits into OCRAM
+   - Responsible for starting the OS loader
+
+* Bootloaders - Security issues
+
+  >  .-----------------------------------------------------------.
+  >  :                                                           :
+  >  :    Initial        Stage 1         Stage 2                 :
+  >  :  .---------.      .-----.      .-----------.      .----.  :
+  >  :  : bootROM : ---> : SPL : ---> : OS loader : ---> : OS :  :
+  >  :  '---------'      '-----'      '-----------'      '----'  :
+  >  :               ^            ^                  ^           :
+  >  :               :            :                  :           :
+  >  :               '--------- Attack --------------'           :
+  >  :                            :                              :
+  >  :                      .-----------.                        :
+  >  :                      : Adversary :                        :
+  >  :                      '-----------'                        :
+  >  '-----------------------------------------------------------'
+
+  Problems
+
+  - Most modern embedded devices allow the firmware to be updated,
+    either locally or remotely (or both).
+  - Bootloaders runs on the system with a very high level of privelege
+  - Standard (non-secure) bootloaders often just rely on a checksum to ensure
+    the next image is whole before it is allowed to execute.
+
+  From a security perspective, this is quite dangerous as it allows the
+  presence of low-level persistent malware!
+* Bootloaders - Security issues
+
+  >  .-----------------------------------------------------------.
+  >  :                                                           :
+  >  :    Initial        Stage 1         Stage 2                 :
+  >  :  .---------.      .-----.      .-----------.      .----.  :
+  >  :  : bootROM : ---> : SPL : ---> : OS loader : ---> : OS :  :
+  >  :  '---------'      '-----'      '-----------'      '----'  :
+  >  :               ^            ^                  ^           :
+  >  :               :            :                  :           :
+  >  :               '--------- Attack --------------'           :
+  >  :                            :                              :
+  >  :                      .-----------.                        :
+  >  :                      : Adversary :                        :
+  >  :                      '-----------'                        :
+  >  '-----------------------------------------------------------'
+
+  Low-level malware may
+
+  - Allow adversaries to steal intelectual property, credentials, etc.
+  - Have the potential to render the system unusable or permanently damaged
+  - Serve as a starting point to compromise other systems
+  - Possibly undetectable from OS, users, OEM, etc., for a long period of time
+  - Disrupt business-critical operations
+  - Lead to substantial costs
+  - etc...
+
+  > Conclusion
+  > 
+  > Nearly every embedded system requires some level of security to ensure the
+  > device cannot be easily compromised or tampered with.
+
+* Secure Boot
+
+  > Definition
+  > 
+  > Secure Boot is the first security barrier for any layered security
+  > approach, and ensures only legitimate and authorized firmware are
+  > allowed to execute before the Operating System is loaded.
+
+  More broadly, we want Secure Boot to have the following reciliency
+  properties:
+
+  - Detection
+  - Protection
+  - Recovery
+
+*  Secure Boot - Chain-of-Trust
+    >  .--------------------- Chain of Trust ------------------------.
+    >  :                                                             :
+    >  :  .-----.  Auth  .-----.  Auth  .-----------.  Auth  .----.  :
+    >  :  : RoT : -----> : SPL : -----> : OS loader : -----> : OS :  :
+    >  :  '-----'        '-----'        '-----------'        '----'  :
+    >  :                                                             :
+    >  '-------------------------------------------------------------'
+
+   Chain-of-Trust
+
+   - Originates from a hardware level Root-of-Trust (RoT)
+   - Each boot (software) component loads and authenticates
+     the next image before transitioning control
+   - Authentication cryptographically validates digital signatures
+     against known and trusted keys
+
+   Failing to authenticate may result in
+
+   - Loading an earlier version known to be good
+   - Or wait for a recovery image through some other means
+   - If no recovery is possible, the device is "broken" (but still secure)
+
+* Secure Boot - Root of Trust
+  > Important
+  > 
+  > RoT should be immutable!
+  > 
+  > Else, special care must be taken to ensure any changes to RoT are
+  > authenticated (and authorized) prior to making updates.
+
+  Typically consists of
+
+  - BootROM (primary bootloader)
+  - Hardware-accellerated Cryptographic Engine
+  - OTP storage (i.e. eFuse) for signature verification keys
+  - Critical configuration settings
+
+* Secure Boot - Digital Signatures
+
+  Secure Boot leverages digital signatures to provide the following security
+  services:
+  
+  - Data Integrity
+  - Source Authentication
+  - Non-repudiation
+
+  Common signature algorithms found on embedded processors:
+  - RSA Digital Signature Algorithm
+  - Eliptic Curve Digital Signature Algorithm (ECDSA)
+
+  >  .------------------- Assymetric keys -----------------.
+  >  :                                                     :
+  >  :  .-------------.  1-1 relationship  .------------.  :
+  >  :  : Private key : <----------------> : Public key :  :
+  >  :  '-------------'                    '------------'  :
+  >  :                                                     :
+  >  '-----------------------------------------------------'
+
+  Private key
+
+  - Used for generating digital signatures
+  - Must be stored securely
+  - Must be protected from unauthorized access
+  - Any use of the key should leave an audit trail
+
+  Public key
+
+  - Used for verifying digital signatures
+  - Typically installed on target device during production
+  - Not a secret, but must be protected on target device from
+    unauthorized modification (i.e. write-protected)
+
+* Secure Boot - Digital Signatures
+
+  >  .------------------- Code Signing Example -------------------.
+  >  :                                                            :
+  >  :      .-------------.                                       :
+  >  :      : Private key : --.                                   :
+  >  :      '-------------'   :                                   :
+  >  :                        :       .-----------.               :
+  >  :  .----.      .-----.   '-----> :  Encrypt  : ----------->  :
+  >  :  : FW : ---> : SHA : --------> :  digest   :  Signature    :
+  >  :  '----'      '-----'  Digest   '-----------'               :
+  >  :                                                            :
+  >  '------------------------------------------------------------'
+
+* Secure Boot - Digital Signatures
+
+  >  .------------------- Code Verification Example --------------------.
+  >  :                                                                  :
+  >  :  .------------.                                                  :
+  >  :  : Public key : --.                                              :
+  >  :  '------------'   :                                              :
+  >  :                   :    .---------.    Original                   :
+  >  :       Signature   '--> : Decrypt : -. digest                     :
+  >  :      .---------------> : digest  :  :                            :
+  >  :  .--------.            '---------'  :    .---------. Identical?  :
+  >  :  : Signed :                         '--> : Compare : --------->  :
+  >  :  :   FW   :                         .--> : digests :             :
+  >  :  '--------'    .-----.              :    '---------'             :
+  >  :      '-------> : SHA : -------------'                            :
+  >  :       FW       '-----'  Calculated digest                        :
+  >  :                                                                  :
+  >  '------------------------------------------------------------------'
+
+* Summary
+
+  - The Boot process
+  - Issues with non-secure bootloaders
+  - Secure Boot
+  -- Chain-of-Trust & Root-of-Trust
+  -- Digital signatures
+
+* Final words
+  General recommendations
+
+  - Start Secure Boot development early
+  - Use a battle tested Secure Boot solution if you can
+  - Read and understand the security reference manual of your processor
+  - Understand the capabilities and limitations of your processor
+  - Verify that all boot components are authenticated during the boot process
+  - Make sure your EOL procedure and its surrounding processes can be trusted
+
+* Final Words
+  Key management
+
+  - Keep your private keys stored securely
+  - Only allow trusted entities to use the keys for signing firmware
+  - Make sure access to keys can be audited
+  - Select a strong key-pair (may depend on the lifetime of the device)
+  - Keys should be unique for each (new) product
+  - Don't use the keys for anything else than signing firmware
+  - Support multiple keys if you can (key revocation)
+
+* Final Words
+  Other considerations
+
+  - Key revocation      ---> Protect against compromised keys
+  - Rollback protection ---> Protect against old and unsecure releases
+  - Encrypted boot      ---> Protect against reverse engineering
+  - Measured boot       ---> Attest to the integrity of your embedded system
+  - Hardware isolation  ---> Secure (trusted) vs Unsecure (untrusted) applications
+* Final Words
+
+  Lastly - Don't be fooled by a false sense of security.
+
+  Secure Boot ensures a secure path from initial boot-up to the OS, but
+  you need to make sure your OS and applications are secure as well!
+
+* Final Words
+
+  Any questions?
+
+

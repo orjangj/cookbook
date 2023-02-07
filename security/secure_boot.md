@@ -1,81 +1,92 @@
 # Secure Boot
 
+State of this document: WIP
+
 ## Abstract
 
-Standard (non-secure) bootloaders often just rely on a checksum to ensure the image loaded is whole
-before it is accepted and executed. From a security perspective, this is quite dangerous as it provides
-no mechanism to protect the embedded system from malware or being hijacked by an adversary. Nearly every
-embedded system requires some form of security to ensure the device cannot be compromised or tampered
-with. This is especially true with the prolifiration of Internet of Things (IoT) devices, which are
-increasingly becoming more interconnected... in distributed systems.. This makes IoT devices ...a .. target ... for malicious attacks,
-as a single weak link in the ... may cause ...
+Standard (non-secure) bootloaders often just rely on a checksum to ensure the image loaded is
+whole before it is accepted and executed. From a security perspective, this is quite dangerous
+as it provides no mechanism to protect the embedded system from malware or being hijacked by an
+adversary. Nearly every embedded system requires some level of security to ensure the device
+cannot be easily compromised or tampered with. This is especially true with the proliferation of
+embedded Internet of Things (IoT) devices (edge devices) being integrated into larger IoT-enabled
+infrastructure and environments. A single weak link may compromise the entire IoT infrastructure,
+allowing adversaries to steal sensitive data and disrupt business-critical operations.
 
-Secure Boot represents the first layer (or barrier) for any layered security approach and provides the initial
-boot-up protections to help ensure that only legitimate firmware and higher-layer security controls can be trusted.
-
-To implement a Secure Boot process requires ... such as hardware based Root-of-Trust...
+Secure Boot represents the first layer (or barrier) for any layered security approach and provides
+the initial boot-up protections to help ensure that only legitimate firmware and higher-layer
+security controls can be trusted. Developing secure boot requires not only hardware support
+for security related controls, but also embedded engineers with expert understanding of the
+hardware capabilities and secure boot solutions.
 
 ## Acronyms
 
-ECDSA - Elliptic Curve Digital Signature Algorithm
-HSM - Hardware Security Module
-IoT - Internet-of-Things
-OEM - Original Equipment Manufacturer
-OS - Operating System
-PKI - Public Key Infrastructure
-ROM - Read-only Memory
-RoT - Root-of-Trust
-RSA -
+- ECDSA | Elliptic Curve Digital Signature Algorithm
+- HSM   | Hardware Security Module
+- IoT   | Internet-of-Things
+- OEM   | Original Equipment Manufacturer
+- OS    | Operating System
+- PKI   | Public Key Infrastructure
+- ROM   | Read-only Memory
+- RoT   | Root-of-Trust
+- RSA   | A public-key cryptosystem (Rivest-Shamir-Adleman)
 
 ## Disclaimer
 
-Any mention of commercial products or reference to commercial organizations is for information only; it
-does not imply recommendation or endorsement by the author(s), nor does it imply that the products mentioned
-are necessarily the best available for the purpose.
+Any mention of commercial products or reference to commercial organizations is for information
+only; it does not imply recommendation or endorsement by the author(s), nor does it imply that
+the products mentioned are necessarily the best available for the purpose.
 
 ## Audience
 
-The primary audience for this document are embedded security engineers and system architects. However,
-other hardware/software engineers or system managers may benefit from reading this document as well. 
-
-The document is targeted towards beginners and experienced embedded system developers alike...
-purpose of this document... embedded microcontrollers/processors. This ... document is not targeted towards a specific hardware/architecture, and is meant as a... although
-developers of ARM embedded microcontrollers/processors may find this more helpful...
+The target audience for this document are embedded security engineers and system architects.
+However, other hardware/software engineers or device managers may benefit from reading this
+document as well.
 
 ## Introduction
 
-The primary purpose of Secure Boot is to ensure only legitimate and authorized firmware are allowed to execute before
-the Operating System (OS, or main application) is loaded, thus preventing malicious software (ie. malware, rootkits) from
-tampering and compromising with the boot process. This is achieved through establishing a Root-of-Trust, at the hardware level,
-and cryptographically validate the digital signature of all pertinent boot components against known and trusted keys.
-The end result is a Chain-of-Trust that ensures the OS is booted into a trusted state.
+The primary purpose of Secure Boot is to ensure only legitimate and authorized firmware are
+allowed to execute before the Operating System (OS, or main application) is loaded. Hence,
+preventing malicious software from compromising the boot process.
 
-Secure Boot cryptographically
-validates the digital signature of all boot components against known/trusted keys, starting from the
-primary boot loader, to one or more intermediate boot loading stages, and finally to the OS and all
-components that run it (i.e. drivers and applications).
+Secure Boot relies on a Chain-of-Trust (CoT) which originates from an immutable hardware level
+Root-of-Trust (RoT). CoT is a method whereby each boot software module is required to cryptographically
+validate the digital signature of the next module (or any pertinent boot component) against known
+and trusted keys before transitioning control.
 
-Bootloaders in general are often overlooked and implemented late in the product development cycle,
-despite being a complicated and critical component to implement. Secure boot makes the effort even
-harder as you are responsible for your own security and a small bug may have ... implications on
-system integrity.
+```mermaid
+flowchart LR
+    A(Root-of-Trust) -->|Authenticate| B(First Stage Bootloader)
+    B -->|Authenticate| C(Second Stage Bootloader)
+    C -->|Authenticate| D(Operating System)
+```
 
-Every microcontroller or processor have their nuances when it comes to secure boot, but in general
-(although not an exhaustive list) you should consider the following:
 
-- Crypto hardware accelleration with support for keys with strong security ...
-- Certified built-in cryptographic libraries
-- Built-in Root-of-Trust in hardware
+The known keys are usually determined by the device manufacturer (OEM).
+
+If a problem is detected during the secure boot process, the bootloader may either halt the system
+from booting further or it may try to load an earlier version of the code that was known to work.
 
 ## Root-of-Trust
 
-The Chain-of-Trust can only be trusted if it originates from an immutable Root-of-Trust, which typically includes:
+The Chain-of-Trust can only be trusted if it originates from an immutable Root-of-Trust, which
+typically includes:
 
-- Primary Bootloader implementing secure boot (vendor bootROM implementation).
-- Certified implementations of cryptographic algorithms
-- Trusted OEM public keys/certificates stored in immutable storage (ie. a hash stored in electrical fuses).
-- Critical boot configuration settings are set and write-protected.
+When an embedded system is powered on or reset, we want to ensure that the first
 
+
+- A primary bootloader implementing secure boot
+- Hardware cryptographic engine
+- A place to immutably store trusted keys or certificates
+- True random number generators (TRNG)?
+- Hardware isolation?
+- Critical boot configuration settings are properly configured and write-protected.
+
+If possible, we want the RoT to first be established by the 
+
+On modern processors this is often provided by the vendor through bootROM
+On microcontrollers you would typically install the secure bootloader in
+a write-protected (to make it immutable) area in flash.
 
 It's important that Root-of-Trust is immutable...
 
@@ -94,37 +105,38 @@ Secure Boot leverages digital signatures to provide the following security servi
   - If combined with a PKI system
   - binds the name of the certificate subject to a public key... Signer is who they claim to be.
 
-A Chain-of-Trust must be established and originate from the Root-of-Trust (hardware).
-To establish trust between ... Root-of-Trust ... 
+## Other Responsibilities
 
-```mermaid
-flowchart LR
-    A(Root-of-Trust) --> B(Secure Bootloader)
-    B --> C(Secure Bootloader #1..n)
-    C --> D(Operating System)
-```
-
-In case a problem is detected during the boot process, ... may either halt the system from booting
-further or it may try to load an earlier version of the code that was known to work.
-
-The known keys are usually determined by the device manufacturer (OEM).
-
-## Key selection
-
-## Other considerations
-
-Although ... Secure Boot is often tasked with several other security services, such as:
+Secure Boot is often tasked with several other security control mechanisms, such as performing:
 
 - Key revocation
 - Rollback protection
 - ...?
 
-Other:
-- Project planning
-  -
+## Hardware selection
+
+Every embedded device (ie. microcontroller or processor) have their nuances when it comes to secure boot, but in general
+(although not an exhaustive list) you should consider the following:
+
+- Crypto hardware accelleration with support for keys with strong security ...
+- Certified built-in cryptographic libraries
+- Built-in Root-of-Trust in hardware
+- Reverting back to a known good state...
+
+- Supply-chain attacks? Cloning of firmware, replacing keys, dummy chips,...
+
+## Key and algorithm selection
+
+National Institute of Standards and Technology (NIST) is widely regarded as the ... (defacto standard) ...
+for security ...
+
+- ECDSA
+- RSA
+- EdDSA
+
+
 
 ## Pitfalls
-
 
 Bootloaders in general are often overlooked and implemented late in the product development cycle,
 despite being a complicated and critical component to implement. Secure boot makes the effort even
@@ -521,7 +533,8 @@ What if bootROM does not validate boot loader?
 
 ## Resources
 
-[1] - [NIST Key Management Guidelines](https://csrc.nist.gov/Projects/Key-Management/Key-Management-Guidelines)
-[2] - [SP 800-57 Part 1](https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final)
-[3] - [5 Elements to Secure Embedded System (part 1-5)](https://www.beningo.com/5-elements-to-secure-embedded-systems-part-1-hardware-based-isolation/)
-[4] - [Hardware-Enabled Security](https://nvlpubs.nist.gov/nistpubs/ir/2022/NIST.IR.8320.pdf)
+- [1] [NIST Key Management Guidelines](https://csrc.nist.gov/Projects/Key-Management/Key-Management-Guidelines)
+- [2] [SP 800-57 Part 1](https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final)
+- [3] [5 Elements to Secure Embedded System (part 1-5)](https://www.beningo.com/5-elements-to-secure-embedded-systems-part-1-hardware-based-isolation/)
+- [4] [Hardware-Enabled Security](https://nvlpubs.nist.gov/nistpubs/ir/2022/NIST.IR.8320.pdf)
+- [5] [Platform Firmware Resiliency Guidelines](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-193.pdf)
