@@ -4,32 +4,34 @@ State of this document: WIP
 
 ## Abstract
 
-Standard (non-secure) bootloaders often just rely on a checksum to ensure the image loaded is
-whole before it is accepted and executed. From a security perspective, this is quite dangerous
-as it provides no mechanism to protect the embedded system from malware or being hijacked by an
-adversary. Nearly every embedded system requires some level of security to ensure the device
-cannot be easily compromised or tampered with. This is especially true with the proliferation of
-embedded Internet of Things (IoT) devices (edge devices) being integrated into larger IoT-enabled
-infrastructure and environments. A single weak link may compromise the entire IoT infrastructure,
-allowing adversaries to steal sensitive data and disrupt business-critical operations.
+Standard (non-secure) bootloaders often just rely on a checksum to ensure the image loaded is whole
+before it is accepted and executed. From a security perspective, this is quite dangerous as it
+provides no mechanism to protect the embedded system from malware or being hijacked by an adversary.
+Nearly every embedded system requires some level of security to ensure the device cannot be easily
+compromised or tampered with. This is especially true with the proliferation of embedded Internet of
+Things (IoT) devices (edge devices) being integrated into larger IoT-enabled infrastructure and
+environments. A single weak link may compromise the entire IoT infrastructure, allowing adversaries
+to steal sensitive data and disrupt business-critical operations.
 
 Secure Boot represents the first layer (or barrier) for any layered security approach and provides
-the initial boot-up protections to help ensure that only legitimate firmware and higher-layer
-security controls can be trusted. Developing secure boot requires not only hardware support
-for security related controls, but also embedded engineers with expert understanding of the
-hardware capabilities and secure boot solutions.
+the initial boot-up protections to ensure that only legitimate firmware and higher-layer security
+controls can be trusted. Developing secure boot requires not only hardware support for security
+related controls, but also embedded engineers with expert understanding of the hardware capabilities
+and secure boot solutions.
 
 ## Acronyms
 
-- ECDSA | Elliptic Curve Digital Signature Algorithm
-- HSM   | Hardware Security Module
-- IoT   | Internet-of-Things
-- OEM   | Original Equipment Manufacturer
-- OS    | Operating System
-- PKI   | Public Key Infrastructure
-- ROM   | Read-only Memory
-- RoT   | Root-of-Trust
-- RSA   | A public-key cryptosystem (Rivest-Shamir-Adleman)
+|       |                                                     |
+| ----- | --------------------------------------------------- |
+| ECDSA | Elliptic Curve Digital Signature Algorithm          |
+| HSM   | Hardware Security Module                            |
+| IoT   | Internet-of-Things                                  |
+| OEM   | Original Equipment Manufacturer                     |
+| OS    | Operating System                                    |
+| PKI   | Public Key Infrastructure                           |
+| ROM   | Read-only Memory                                    |
+| RoT   | Root-of-Trust                                       |
+| RSA   | Rivest-Shamir-Adleman (A public-key cryptosystem)   |
 
 ## Disclaimer
 
@@ -37,14 +39,121 @@ Any mention of commercial products or reference to commercial organizations is f
 only; it does not imply recommendation or endorsement by the author(s), nor does it imply that
 the products mentioned are necessarily the best available for the purpose.
 
-## Audience
+## Scope and Audience
 
 The target audience for this document are embedded security engineers and system architects.
-However, other hardware/software engineers or device managers may benefit from reading this
-document as well.
+However, other hardware/software engineers may benefit from reading this document as well.
 
 ## Introduction
 
+TODO
+- What is the purpose of a bootloader?
+- When and why do we need a bootloader?
+- How does the boot process work from start to finish
+- Images/Diagrams
+- References
+
+A bootloader is a piece of software (program) that is executed on a device when it is powered on
+or reset. Bootloaders come in many flavors, but in general the main purpose of bootloaders is to
+prepare the hardware and the environment on which the Operating System (OS) or main application
+runs on. Depending on the processor, the boot process may be split into one or more boot stages
+before the OS is loaded - Each stage executing its own boot program with a specific set of
+responsibilities.
+
+```plantuml
+@startuml
+
+skinparam backgroundColor #00000000
+
+(*) -right-> "bootROM"
+-> "Secondary Program Loader (SPL)"
+-> "OS Loader"
+-> "OS"
+
+@enduml
+```
+
+A central piece of boot software found in most embedded processors is the bootROM - An immutable vendor-provided
+implementation stored in mask ROM or write-protected flash inside the processor. The bootROM is the first
+significant code that runs on an embedded device after power-on or reset.
+
+Depending on the configuration of some
+strap pins or internal fuses it may decide from where to load the next part of the code to be executed and how
+or whether to verify it for correctness or validity. Sometimes it may contain additional functionality, possibly
+usable by user code during or after booting.
+
+The bootROM may ... extend ... it's capabilities, allowing subsequent boot software components
+to leverage ... features ... provided by the bootROM. This includes ... the cryptographic engine ...
+reading OTP fuses ... 
+
+... initializing registers to access boot medium (external, internal)
+
+Performs initial hardware setup before transitioning control to the next image.
+
+The capabilities of a bootROM varies from processor to processor.
+
+In many cases, the bootROM is not flexible enough to support complex boot-up procedures.
+
+In application processors, capable of running embedded Linux, a bootROM is generally not flexible
+enough to boot the entire Linux kernel. In such cases, a multi-stage bootloading environment
+comprising of one or more boot stages is often required.
+
+Secondary Program Loader (SPL)
+   - Performs additional hardware setup (i.e. external RAM)
+   - Usually required on processors capable of supporting i.e. embedded linux
+   - A minimal implementation that fits into OCRAM
+   - Responsible for starting the OS loader
+
+OS loader
+  - Performs additional hardware setup
+  - Responsible for loading and starting the OS
+  - Mutable by default (can be updated)
+  - Can support more complex requirements
+  -- Load the OS from external non-volatile memory
+  -- Support different communication channels (serial, network)
+  -- Implement interactive shell
+  -- etc..
+
+Problems
+
+  - Most modern embedded devices allow the firmware to be updated,
+    either locally or remotely (or both).
+  - Bootloaders runs on the system with a very high level of privelege
+  - Standard (non-secure) bootloaders often just rely on a checksum to ensure
+    the next image is whole before it is allowed to execute.
+
+  From a security perspective, this is quite dangerous as it allows the
+  presence of low-level persistent malware!
+
+
+```mermaid
+flowchart LR
+    A(bootROM) --> B(First Stage Bootloader)
+    B --> C(Second Stage Bootloader)
+    C --> D(Operating System)
+    E(Adversary) -->|Attack| A
+    E -->|Attack| B
+    E -->|Attack| C
+    E -->|Attack| D
+```
+
+Low-level malware may
+
+  - Allow adversaries to steal intelectual property, credentials, etc.
+  - Have the potential to render the system unusable or permanently damaged
+  - Serve as a starting point to compromise other systems
+  - Possibly undetectable from OS, users, OEM, etc., for a long period of time
+  - Disrupt business-critical operations
+  - Lead to substantial costs
+  - etc...
+
+  > Conclusion
+  > 
+  > Nearly every embedded system requires some level of security to ensure the
+  > device cannot be easily compromised or tampered with.
+
+
+## Secure Boot
 The primary purpose of Secure Boot is to ensure only legitimate and authorized firmware are
 allowed to execute before the Operating System (OS, or main application) is loaded. Hence,
 preventing malicious software from compromising the boot process.
@@ -56,9 +165,11 @@ and trusted keys before transitioning control.
 
 ```mermaid
 flowchart LR
-    A(Root-of-Trust) -->|Authenticate| B(First Stage Bootloader)
-    B -->|Authenticate| C(Second Stage Bootloader)
-    C -->|Authenticate| D(Operating System)
+    A(Root-of-Trust) -->|Auth| B(First Stage Bootloader)
+    B -->|Callback| A
+    B -->|Auth| C(Second Stage Bootloader)
+    C -->|Callback| A
+    C -->|Auth| D(Operating System)
 ```
 
 
@@ -67,13 +178,17 @@ The known keys are usually determined by the device manufacturer (OEM).
 If a problem is detected during the secure boot process, the bootloader may either halt the system
 from booting further or it may try to load an earlier version of the code that was known to work.
 
-## Root-of-Trust
+  More broadly, we want Secure Boot to have the following reciliency
+  properties:
+
+  - Detection
+  - Protection
+  - Recovery
+
+### Root-of-Trust
 
 The Chain-of-Trust can only be trusted if it originates from an immutable Root-of-Trust, which
 typically includes:
-
-When an embedded system is powered on or reset, we want to ensure that the first
-
 
 - A primary bootloader implementing secure boot
 - Hardware cryptographic engine
@@ -81,6 +196,8 @@ When an embedded system is powered on or reset, we want to ensure that the first
 - True random number generators (TRNG)?
 - Hardware isolation?
 - Critical boot configuration settings are properly configured and write-protected.
+
+When an embedded system is powered on or reset, we want to ensure that the first
 
 If possible, we want the RoT to first be established by the 
 
@@ -94,16 +211,43 @@ It's important that Root-of-Trust is immutable...
 
 Secure Boot leverages digital signatures to provide the following security services:
 
-- **Data Integrity**
-  - A property whereby data has not been modified since it was created, transmitted or stored.
-- **Source Authentication**
-  - Used to verify the identity of the entity that created and/or sent information.
-- **Identity Authentication**
-  - If combined with a PKI system?
-  - ...?
-- **Non-repudiation**
-  - If combined with a PKI system
-  - binds the name of the certificate subject to a public key... Signer is who they claim to be.
+- **Data Integrity** - A property whereby data has not been modified since it was created, transmitted or stored.
+- **Source Authentication** - Provides assurance that the data originates from a legitimate source (the private key holder).
+- **Non-repudiation** - The private key holder cannot deny having signed the data.
+
+Similar to checksums (i.e. CRC32), cryptographic hash functions (SHA) detects accidental or
+intentional data corruption. However, cryptographic hash functions posess additional properties making them suitable for ... such as digital signatures.
+Informally, cryptographic hash functions ensures that a malicious adversary connot easily replace or modify the original
+data to produce the same digest (TODO: REFERENCE).
+
+Code Signing
+
+```plantuml
+@startuml
+
+skinparam backgroundColor #00000000
+
+"Firmware Image" -right-> "SHA"
+-> "Encrypt Digest"
+-> "Digital Signature"
+"Private Key" -down-> "Encrypt Digest"
+
+@enduml
+```
+
+Code Verification
+```plantuml
+@startuml
+
+skinparam backgroundColor #00000000
+"Firmware Image" -right-> "SHA"
+-> "Encrypt Digest"
+-> "Digital Signature"
+"Private Key" -down-> "Encrypt Digest"
+
+@enduml
+```
+
 
 ## Other Responsibilities
 
@@ -418,6 +562,8 @@ B -->|Original hash| E{Compare hash}
 D --> E
 ```
 
+
+
 ## OEM requirements
 
 Series of tasks during manufacturing
@@ -538,3 +684,4 @@ What if bootROM does not validate boot loader?
 - [3] [5 Elements to Secure Embedded System (part 1-5)](https://www.beningo.com/5-elements-to-secure-embedded-systems-part-1-hardware-based-isolation/)
 - [4] [Hardware-Enabled Security](https://nvlpubs.nist.gov/nistpubs/ir/2022/NIST.IR.8320.pdf)
 - [5] [Platform Firmware Resiliency Guidelines](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-193.pdf)
+- [6] [Fundamentals of Booting Embedded Processors](https://www.embedded.com/fundamentals-of-booting-for-embedded-processors)
