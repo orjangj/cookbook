@@ -52,106 +52,116 @@ However, other hardware/software engineers may benefit from reading this documen
 
 ## Introduction
 
-TODO
-
-- How does the boot process work from start to finish
-- Images/Diagrams
-- References
-
 A bootloader is a piece of software (program) that is executed on a device when it is powered on or
 reset. Bootloaders come in many flavors, but in general bootloaders aims to facilitate the following
 primary goals:
 
-- Prepare the hardware and the embedded environment before the Operating System (OS) or main
-  application is loaded.
+- Prepare the hardware and the embedded environment before loading the Operating System (OS) or main
+  application.
 - Allow the system software to be updated without the need for specialized hardware equipment such
   as a JTAG programmer.
-
-In many cases, more than one bootloader is required to accomplish the task of booting the system.
-This is especially true for application processors capable of running embedded Linux.
-
-is a ... stages before the OS is loaded - Each stage executing its own boot program with a specific
-set of responsibilities.
-
-```plantuml
-@startuml
-
-skinparam backgroundColor #00000000
-
-(*) -right-> "bootROM"
--> "Secondary Program Loader (SPL)"
--> "OS Loader"
--> "OS"
-
-@enduml
-```
 
 A central piece of boot software found in most embedded processors is the bootROM - An immutable
 vendor-provided implementation stored in mask ROM or write-protected flash inside the processor. The
 bootROM is the first significant code that runs on an embedded device after power-on or reset.
 Depending on strap pin configurations or internal fuse settings it may decide from where to load the
-next part of the code to be executed and how or whether to verify it for correctness or validity
-before transitioning control. Sometimes the bootROM may contain additional functionality, possibly
+next image to be executed and how or whether to verify it for correctness or validity before
+transitioning control. Sometimes the bootROM may contain additional functionality, possibly
 extendable to user code during or after booting. The capabilities of a bootROM varies from processor
 to processor, but in most cases the bootROM is not flexible enough to support complex boot-up
-requirements.
+requirements (such as loading an operating system from a file system).
 
-The SPL is usually a minimal implementation of the OS loader that fits into the processors on-chip
-RAM (OCRAM). Its primary purpose is to initialize external memory on which the OS loader may be
-executed. The OS loader, as its name implies, is responsible for booting the OS.
+In most cases, more than one bootloader is required to accomplish the task of updating or booting
+the system - A so-called multi-stage boot process, where each stage in the boot sequence executes
+its own boot program with specific set of capabilities and responsibilities.
 
-OS loader
+```plantuml
+@startuml
 
-- Performs additional hardware setup
-- Responsible for loading and starting the OS
-- Mutable by default (can be updated)
-- Can support more complex requirements -- Load the OS from external non-volatile memory -- Support
-  different communication channels (serial, network) -- Implement interactive shell -- etc.
+!theme spacelab
+skinparam nodesep 50
 
-Most modern embedded devices allow the firmware to be updated, either locally or remotely (or both).
-Bootloaders runs on the system with a very high level of privilege. Standard (non-secure)
-bootloaders often just rely on a checksum to ensure the next image is whole before it is allowed to
-execute. From a security perspective, this is quite dangerous as it allows the presence of low-level
-persistent malware!
+(*) -right-> "bootROM"
+-> "First Stage\nBootloader"
+-> "Second Stage\nBootloader"
+-> "Operating \nSystem"
 
-```mermaid
-flowchart LR
-    A(bootROM) --> B(First Stage Bootloader)
-    B --> C(Second Stage Bootloader)
-    C --> D(Operating System)
-    E(Adversary) -->|Attack| A
-    E -->|Attack| B
-    E -->|Attack| C
-    E -->|Attack| D
+@enduml
 ```
 
-Low-level malware may allow adversaries to steal intellectual property, credentials and other
-sensitive data. It also has the potential to render the system unusable or permanently damaged, or
-even serve as a starting point to compromise other systems part of an embedded device (or IoT
-infrastructure), possibly undetectable for a long period of time. Consequently, low-level malware
-can disrupt business-critical operations and lead to substantial costs.
+This is especially true for application processors capable of running embedded Linux where the
+processor's On-Chip RAM (OCRAM) may not be large enough to hold the bootloader (OS loader)
+responsible for loading the Linux kernel. A so-called Secondary Program Loader (SPL) is used to
+prepare external RAM on which the OS loader may be loaded and executed.
+
+Another reason for having more than one bootloader may be because you want the capability to upgrade
+your bootloader (i.e. due to bugs).
+
+OS Loader
+
+- Can support more complex requirements -- Load the OS from external non-volatile memory -- Support
+  different communication channels (serial, network) -- Implement interactive shell -- etc. Most
+  modern embedded devices allow the firmware to be updated, either locally or remotely (or both).
+
+Regardless of the boot process topology, it's important to note that bootloaders runs on the system
+with a very high level of privilege. Standard (non-secure) bootloaders often just rely on a checksum
+to ensure the next image is whole before it is allowed to execute. From a security perspective, this
+is quite dangerous as it allows the presence of low-level persistent malware.
+
+```plantuml
+@startuml
+
+!theme spacelab
+skinparam nodesep 50
+skinparam linetype ortho
+
+(*) -right-> "bootROM"
+-> "First Stage\nBootloader"
+-> "Second Stage\nBootloader"
+-> "Operating\nSystem"
+"Adversary" -up->[Attack] "bootROM"
+"Adversary" -up->[Attack] "First Stage\nBootloader"
+"Adversary" -up->[Attack] "Second Stage\nBootloader"
+
+@enduml
+```
+
+Low-level malware may allow adversaries to compromise or steal intellectual property, credentials
+and other sensitive or critical data. It also has the potential to render the system unusable or
+permanently damaged which can disrupt business-critical operations. In some cases, low-level malware
+may even serve as a starting point to compromise other systems part of the embedded device (or IoT
+infrastructure), possibly running undetectable for a long period of time. Consequently, low-level
+malware can lead to substantial costs.... I.e. damaging company trust/resume/....
+
+Nearly every embedded system requires some level of security to ensure the device cannot be easily
+compromised or tampered with. Secure Boot represents the first layer (or barrier) for any layered
+security approach and provides the initial boot-up protections to ensure that only legitimate
+firmware and higher-layer security controls can be trusted.
 
 ## Secure Boot
 
-Nearly every embedded system requires some level of security to ensure the device cannot be easily
-compromised or tampered with. The primary purpose of Secure Boot is to ensure only legitimate and
-authorized firmware are allowed to execute before the Operating System (OS, or main application) is
-loaded. Hence, preventing malicious software from compromising the boot process.
+The primary purpose of Secure Boot is to ensure only legitimate and authorized firmware are allowed
+to execute before the OS (or main application) is loaded. Hence, preventing malicious software from
+compromising the boot process. Secure Boot relies on a Chain-of-Trust (CoT) which originates from an
+immutable hardware level Root-of-Trust (RoT). CoT is a method whereby each boot software module is
+required to cryptographically validate the digital signature of the next module (or any pertinent
+boot component) against known and trusted keys before transitioning control. If a problem is
+detected during the secure boot process, the bootloader may either halt the system from booting
+further or it may try to load an earlier version of the code that was known to work.
 
-Secure Boot relies on a Chain-of-Trust (CoT) which originates from an immutable hardware level
-Root-of-Trust (RoT). CoT is a method whereby each boot software module is required to
-cryptographically validate the digital signature of the next module (or any pertinent boot
-component) against known and trusted keys before transitioning control. If a problem is detected
-during the secure boot process, the bootloader may either halt the system from booting further or it
-may try to load an earlier version of the code that was known to work.
+```plantuml
+@startuml
 
-```mermaid
-flowchart LR
-    A(Root-of-Trust) -->|Auth| B(First Stage Bootloader)
-    B -->|Callback| A
-    B -->|Auth| C(Second Stage Bootloader)
-    C -->|Callback| A
-    C -->|Auth| D(Operating System)
+!theme spacelab
+skinparam nodesep 50
+skinparam linetype ortho
+
+(*) -right-> "bootROM"
+->[Auth] "First Stage\nBootloader"
+->[Auth] "Second Stage\nBootloader"
+->[Auth] "Operating\nSystem"
+
+@enduml
 ```
 
 The known keys are usually determined by the device manufacturer (OEM).
@@ -167,7 +177,7 @@ More broadly, we want Secure Boot to have the following resiliency properties:
 The Chain-of-Trust can only be trusted if it originates from an immutable Root-of-Trust, which
 typically includes:
 
-- A primary bootloader implementing secure boot
+- A primary bootloader (bootROM) implementing secure boot
 - Hardware cryptographic engine
 - A place to immutably store trusted keys or certificates
 - True random number generators (TRNG)?
@@ -176,28 +186,26 @@ typically includes:
 
 When an embedded system is powered on or reset, we want to ensure that the first
 
-If possible, we want the RoT to first be established by the
-
 On modern processors this is often provided by the vendor through bootROM On microcontrollers you
 would typically install the secure bootloader in a write-protected (to make it immutable) area in
 flash.
 
 It's important that Root-of-Trust is immutable...
 
-## Digital signatures
+### Digital signatures
 
 Secure Boot leverages digital signatures to provide the following security services:
 
 - Data Integrity
 - **Source Authentication** - Provides assurance that the data originates from a legitimate source
-  (the private key holder).
+  (the private key-holder).
 - **Non-repudiation** - The private key-holder cannot deny having signed the data.
 
 **Data Integrity** is a property whereby data has not been modified since it was created,
-transmitted or stored. Digital signatures rely on Secure Hashing Algorithms (SHA) to ensure data is in a
-state of integrity. Similar to checksums (i.e. CRC32), SHA detects accidental or intentional data
-corruption. However, cryptographic hash functions possess additional properties making them suitable
-for ... such as digital signatures. Informally, cryptographic hash functions ensures that a
+transmitted or stored. Digital signatures rely on Secure Hashing Algorithms (SHA) to ensure data is
+in a state of integrity. Similar to checksums (i.e. CRC32), SHA detects accidental or intentional
+data corruption. However, cryptographic hash functions possess additional properties making them
+suitable for ... such as digital signatures. Informally, cryptographic hash functions ensures that a
 malicious adversary cannot easily replace or modify the original data to produce the same digest
 (TODO: REFERENCE).
 
@@ -209,10 +217,12 @@ Code Signing
 ```plantuml
 @startuml
 
-skinparam backgroundColor #00000000
+!theme spacelab
+skinparam nodesep 60
+skinparam linetype ortho
 
-"Firmware Image" -right-> "SHA"
--> "Encrypt Digest"
+"Firmware\nImage" -right-> "SHA"
+->[Digest] "Encrypt Digest"
 -> "Digital Signature"
 "Private Key" -down-> "Encrypt Digest"
 
@@ -224,14 +234,36 @@ Code Verification
 ```plantuml
 @startuml
 
-skinparam backgroundColor #00000000
-"Firmware Image" -right-> "SHA"
--> "Encrypt Digest"
--> "Digital Signature"
-"Private Key" -down-> "Encrypt Digest"
+!theme spacelab
+skinparam nodesep 60
+skinparam linetype ortho
+
+"Firmware\nImage" -right->[FW] "SHA"
+->[Calc.\nDigest] "Identical?"
+"Firmware\nImage" -up->[Signature] "Decrypt Signature"
+"Public Key" -down-> "Decrypt Signature"
+"Decrypt Signature" -->[Orig. digest] "Identical?"
 
 @enduml
 ```
+
+### Detection
+
+### Protection
+
+Normally, updating a system's firmware is managed by some application running as part of the
+operating system. I.e. Mender or Rauc. Sometimes however, a bootloader may provide functionality
+that allows system firmware to be updated through some communication channel such as UART, CAN, or
+Ethernet.
+
+In such cases it's important that the bootloader protects the memory storage by requiring
+authenticated update procedures before allowing the new firmware to be installed.
+
+### Recovery
+
+Golden images, etc...?
+
+Recover the system to a state of integrity.
 
 ## Other Responsibilities
 
