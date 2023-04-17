@@ -1,6 +1,4 @@
-# Secure Boot
-
-## Abstract
+# Abstract
 
 Standard non-secure bootloaders often just rely on a simple checksum to ensure
 the next image is whole before it is accepted and executed. From a security
@@ -21,7 +19,7 @@ security related controls, but also embedded engineers with understanding of the
 hardware capabilities and secure boot solutions needed to ensure higher-layer
 security controls can be trusted.
 
-## Acronyms
+# Acronyms
 
 | Abbreviation | Meaning                                           |
 | :----------- | :------------------------------------------------ |
@@ -37,14 +35,14 @@ security controls can be trusted.
 | RoT          | Root-of-Trust                                     |
 | RSA          | Rivest-Shamir-Adleman (A public-key cryptosystem) |
 
-## Disclaimer
+# Disclaimer
 
 Any mention of commercial products or reference to commercial organizations is
 for information only; it does not imply recommendation or endorsement by the
 author(s), nor does it imply that the products mentioned are necessarily the
 best available for the purpose.
 
-## Scope & Audience
+# Scope & Audience
 
 This document is mostly targeting secure boot for embedded systems such as
 microcontrollers or application processors used in IoT edge devices. However,
@@ -53,7 +51,7 @@ general purpose computing systems. The primary audience for this document are
 embedded security engineers and system architects. However, other
 hardware/software engineers may benefit from reading this document as well.
 
-## Introduction
+# Introduction
 
 A bootloader is a program that is executed on a device when it is powered on or
 reset. Bootloaders come in many flavors and sizes, but in general bootloaders
@@ -69,7 +67,7 @@ immutable piece of code stored in mask ROM or write-protected flash inside the
 processor. It is the first significant code that is executed by the processor
 after power-on or reset, and contains instructions for initial hardware setup
 needed to boot the next image. Where and how to load and execute the next image
-from (and in which order) is in many cases configurable through strap pins,
+from, and in which order, is in many cases configurable through strap pins,
 electronic fuses, or internal flash settings. The Boot ROM may contain
 additional functionality, possibly extendable to user code during or after boot,
 such as the ability to verify the next image for validity and correctness before
@@ -95,17 +93,22 @@ skinparam nodesep 50
 @enduml
 ```
 
-This is especially true for application processors capable of running embedded
-Linux where the processor's On-Chip RAM (OCRAM) may not be large enough to hold
-the bootloader (OS loader) responsible for loading the Linux kernel. A so-called
-Secondary Program Loader (SPL) is used to prepare external RAM on which the OS
-loader may be loaded and executed.
+The number of stages required to complete the boot process depends on the
+processor. On microcontrollers, the Boot ROM itself is capable of starting the
+main application reciding in internal flash. However, a separate bootloader is
+usually required to support updating the main application. On an application
+processor capable of running embedded Linux, a so-called Secondary Program
+Loader (SPL) that fits into On-Chip RAM (OCRAM) is required to initialize
+external RAM before loading and executing the OS loader. The OS loader will then
+take care of loading the Linux kernel and its data (i.e. devicetree and
+ramdisk).
 
-Regardless of the boot process topology, it's important to note that bootloaders
-runs on the system with a very high level of privilege. Standard non-secure
-bootloaders often just rely on a simple checksum (i.e. CRC32) to ensure the next
-image is whole before it is allowed to execute. From a security perspective,
-this is quite dangerous as it allows the presence of low-level malware.
+Regardless of the number of stages required to boot the device, it's important
+to note that bootloaders runs on the system with a very high level of privilege.
+Standard non-secure bootloaders often just rely on a simple checksum (i.e.
+CRC32) to ensure the next image is whole before it is allowed to execute. From a
+security perspective, this is quite dangerous as it allows the presence of
+low-level malware.
 
 ```plantuml
 @startuml
@@ -142,7 +145,7 @@ first layer for any layered security approach and provides the initial boot-up
 protections to ensure higher-layer security controls can be trusted by only
 allowing legitimate firmware to be executed.
 
-## Secure Boot
+# Secure Boot
 
 The primary purpose of secure boot is to ensure only legitimate and authorized
 firmware are allowed to execute before the OS (or main application) is loaded.
@@ -174,10 +177,63 @@ loading an older version that was previously known to work or allow recovery
 images to be downladed locally or remotely through an authenticated update
 mechanism.
 
-### Digital signatures
+## Root-of-Trust
 
-A digital signature is an electronic analog of a written signature that provides
-the following security services [7]:
+The Secure Boot CoT can only be trusted if it originates from an immutable
+hardware-level Root-of-Trust (RoT), which typically includes (but not limited
+to):
+
+- A primary bootloader that supports secure boot
+- A hardware-accelerated cryptographic engine
+- Critical configuration settings
+- A place to safely store trusted keys
+
+```plantuml
+@startuml
+
+!theme spacelab
+skinparam nodesep 50
+skinparam linetype ortho
+
+(*) -right-> "RoT"
+->[Auth] "First Stage\nBootloader"
+->[Auth] "Second Stage\nBootloader"
+->[Auth] "Operating\nSystem"
+
+@enduml
+```
+
+Preferably, the Boot ROM code should support secure boot since it is already
+immutable and thus implicitly considered a trusted software component. Note
+however, that Boot ROM code, like any other piece of software, can suffer from
+security vulnerabilities and bugs which may impact the secure boot process.
+Hence, it is important to check whether or not the processor has any known
+security vulnerabilities during hardware selection. If the Boot ROM does not
+implement a secure boot feature, which may be the case for microcontrollers, it
+may be possible to extend the Boot ROM with a secure bootloader stored in a
+permanently write-protected flash area.
+
+Critical configuration settings include policies and settings that may alter the
+behavior of the boot process. Such as what boot devices to boot from and in what
+order, whether or not the processor allows direct boot to external memory, or if
+secure boot or debug ports are enabled.
+
+The trusted keys are essential to ensuring trustworthiness of secure boot
+process. Depending on the capabilities and requirements of the processor, the
+trusted keys could be either a set of X509 certificates, or it could be public
+keys in raw format. The latter is more likely to be the case for
+microcontrollers. Although the trusted keys are not considered secret, it is
+important that the keys cannot be replaced or tampered with. Normally, the keys
+are embedded and locked by OEM in one-time programmable memory during device
+production to prevent the keys from being modified in the field.
+
+## Digital signatures
+
+Digital signatures employ Public Key Cryptography, a field of cryptographic
+systems that use pairs of related keys, to create an electronic analog of a
+written signature. Each key pair consists of a private key and a corresponding
+public key. Secure boot leverages digital signatures to provide the following
+security services [7]:
 
 - Data Integrity
 - Source Authentication
@@ -188,21 +244,21 @@ created, transmitted or stored. Digital signatures rely on a Secure Hash
 Algorithm (SHA) to ensure data is in a state of integrity. SHA's transforms data
 into a unique fixed-length digital fingerprint that is computationally
 infeasibly to forge and replace, thus enabling the secure boot process to detect
-both accidental or intentional data corruption.
+both accidental and intentional data corruption.
 
 **Source Authentication** provides assurance that the data originates from a
 legitimate source (the private key-holder). When a digital signature is created
 for a firmware image, the image is first hashed using a Secure Hash Algorithm
 (i.e. SHA256), and then subsequently encrypted using the private key. The
 resulting signature is then attached to the original firmware image to create a
-signed image. During the signature verification process, the verifiying entity
-computes the hash over the original image and compares the result to the
-decrypted signature attached to the image. Only the corresponding public key is
-capable of decrypting the signature that results in the original hash computed
-by the signatory. If the two hash values are equal, the digital signature is
-authentic and the recipient is given the assurance that the image is both in a
-state of integrity and comes from a trusted source. The following diagrams
-illustrate the signing and verification process for digital signatures.
+signed image. During the signature verification process, the signature is
+decrypted using the corresponding public key. To check whether or not the
+decrypted signature is authentic, the verifiying entity computes its own hash
+over the original image. If the computed hash matches the result of the
+decrypted signature the verifier is given the assurance that the image is both
+in a state of integrity and originates from a legitimate and trusted source. The
+following diagrams illustrate the signing and verification process for digital
+signatures.
 
 ```plantuml
 @startuml
@@ -242,12 +298,7 @@ is critical. If the private key is known to an adversary, then secure boot
 provides no security against executing malicious software. In the event that a
 private key is compromised, the corresponding public key installed on the
 device(s) must be revoked to ensure the device can maintain its security
-posture. If key revocation is not possible it's advisable to decommission the
-device(s). Or you'll have to accept the fact that the device(s) cannot prevent
-malicious software from being installed.
-
-This is achieved through use of Public Key Cryptography, where an assymetric
-key-pair consisting of a private and public key counterparts.
+posture.
 
 The Digital Signature Standard FIPS 186-5 [7] currently approves three digital
 signature techniques:
@@ -262,55 +313,6 @@ operations which includes either RSA and/or ECDSA signature algorithms.
 TODO
 
 - Using weak keys
-
-### Root-of-Trust
-
-The Secure Boot CoT can only be trusted if it originates from an immutable
-hardware-level Root-of-Trust (RoT), which typically includes (but not limited
-to):
-
-- A primary bootloader that supports Secure Boot
-- A hardware-accelerated cryptographic engine
-- Security configuration settings
-- A place to safely store trusted keys
-
-```plantuml
-@startuml
-
-!theme spacelab
-skinparam nodesep 50
-skinparam linetype ortho
-
-(*) -right-> "RoT"
-->[Auth] "First Stage\nBootloader"
-->[Auth] "Second Stage\nBootloader"
-->[Auth] "Operating\nSystem"
-
-@enduml
-```
-
-Preferably, the Boot ROM code should support secure boot since it is already
-immutable and thus implicitly considered a trusted software component. Note
-however, that Boot ROM code, like any other piece of software, can suffer from
-security vulnerabilities and bugs which may impact the secure boot process.
-Hence, it is important to check whether or not the processor has any known
-security vulnerabilities during hardware selection. If the Boot ROM does not
-implement a secure boot feature, which may be the case for microcontrollers, it
-may be possible to extend the Boot ROM with a secure bootloader stored in a
-permanently write-protected flash area.
-
-Security settings include policies and configuration settings that may alter the
-behavior of the boot process. Such as what boot devices to boot from and in what
-order, whether or not the processor allows direct boot to external memory, or if
-debug ports are enabled. Make sure you familiarize yourself with the processor
-and its security reference manual.
-
-The trusted keys are essential to establishing Root-of-Trust.
-
-Although public keys are not considered secret, it is important that signature
-verification keys cannot be tampered with. Normally, the keys are embedded and
-locked by OEM in one-time programmable memory (i.e. electrical fuses) during
-device production to prevent the keys from being modified in the field.
 
 ## Additional Responsibilities
 
@@ -328,10 +330,9 @@ countarpart has been compromised. If such a discovery is made, it's important to
 have a proper plan of action in place to ensure devices can be kept secure as
 compromised keys can be used to "circumvent" the intended function of the secure
 boot process. When a key has been successfully revoked, the key can no longer be
-used to authenticate images signed with the private key counterpart. This is
-also true for any backup images that may already recide in device storage
-memory. If the backup images were signed with the revoked key, it's important to
-update them as well in case you rely on the images for redundancy.
+used to authenticate images signed with the corresponding private key. This also
+affects any backup images that may already recide in device storage memory if
+they were signed with the private key.
 
 **Rollback protection** ensures earlier versions of an image containing security
 vulnerabilities cannot be executed on the device. Whether or not the rollback
@@ -346,7 +347,7 @@ such cases it's important that the bootloader protects the memory storage by
 requiring authenticated update procedures before allowing the new firmware to be
 installed.
 
-## Final words
+# Final words
 
 Bootloaders in general are often overlooked and implemented late in the product
 development cycle, despite being a complicated and critical component to
@@ -359,15 +360,8 @@ third-party or vendor provided secure boot solution can be leveraged. It's
 better to take a known, good implementation of a secure bootloader and match it
 to your needs rather than implementing one from scratch. Regardless of whether a
 vendor or third-party secure boot solution can be leveraged, it is critical that
-the implementation is started as early as possible as it may take time to get
-familiar with the security capabilities of the processor, and properly test and
-verify successful implementation of secure boot.
-
-Every microcontroller or processor have their nuances when it comes to Secure
-Boot, so make sure you understand the capabilities of the processor before
-deciding whether the processor fits your security requirements. Preferably, you
-should choose a processor which has built-in support for Root-of-Trust in
-hardware to ensure secure boot cannot be tampered with.
+the implementation is started as early as possible as it may take time to arrive
+at a successful implementation of secure boot.
 
 Lastly, don't be fooled by a false sense of security. Secure boot does not lock
 the entire system down. It only secures the boot process until the OS takes
@@ -378,25 +372,7 @@ digital signatures. For the device to maintain its security posture, OEM's need
 to ensure the private keys are securely stored, audited and properly protected
 from unauthorized access.
 
-## Other considerations
-
-0. Encrypted Boot
-1. Measured Boot And Remote Attestation
-2. Trusted Boot
-3. Verified Boot
-4. OPTEE
-5. ...
-
-- Replay Protected Memory Block (RPMB)
-  - Bind specific eMMC part and the SoC component in the device together.
-    Prevents reuse of eMMC in another device with an OS that makes use of the
-    RPMB.
-
-On a much broader scale, as outlined by "NIST SP 800-193. Platform Firmware
-Resiliency Guidelines" [5], cyber resiliency not only requires proper protection
-mechanisms, but also proper recovery and detection mechanisms.
-
-## Resources
+# Resources
 
 - [1]
   [NIST Key Management Guidelines](https://csrc.nist.gov/Projects/Key-Management/Key-Management-Guidelines)
