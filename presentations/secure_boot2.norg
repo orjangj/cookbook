@@ -1,0 +1,32 @@
+@document.meta
+title: Secure Boot Introduction - Part 2
+description: IMX8M Nano Use-Case
+authors: og
+categories: Security
+created: 2023-03-07
+updated: 2023-03-07
+version: 0.0.1
+@end
+
+= TOC
+
+* Secure Boot - Part 2
+  ** Recap
+     - Why we need Secure Boot
+     - Chain of Trust
+     - Root og Trust
+     - Digital Signatures
+
+** Use-Case - IMX8M Nano
+
+   - High Assurance Boot
+   - PKI
+   - Critical configurations
+   -- SRK_HASH, SRK_LOCK, CFG_BOOT, HEO, JTAG
+   - Super Root Keys
+   -- Key types, PKI trees
+   - NXP Code Signing Tool & Command Sequence File
+   - Key revocation
+
+* High Assurance Boot
+

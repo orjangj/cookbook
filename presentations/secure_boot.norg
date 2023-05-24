@@ -4,7 +4,7 @@ description: An introduction to Secure Boot for embedded systems
 authors: og
 categories: Security
 created: 2023-01-12
-updated: 2023-02-01
+updated: 2023-04-16
 version: 0.0.1
 @end
 
@@ -158,14 +158,14 @@ version: 0.0.1
   - etc...
 
   > Conclusion
-  > 
+  >
   > Nearly every embedded system requires some level of security to ensure the
   > device cannot be easily compromised or tampered with.
 
 * Secure Boot
 
   > Definition
-  > 
+  >
   > Secure Boot is the first security barrier for any layered security
   > approach, and ensures only legitimate and authorized firmware are
   > allowed to execute before the Operating System is loaded.
@@ -202,9 +202,9 @@ version: 0.0.1
 
 * Secure Boot - Root of Trust
   > Important
-  > 
+  >
   > RoT should be immutable!
-  > 
+  >
   > Else, special care must be taken to ensure any changes to RoT are
   > authenticated (and authorized) prior to making updates.
 
@@ -219,7 +219,7 @@ version: 0.0.1
 
   Secure Boot leverages digital signatures to provide the following security
   services:
-  
+
   - Data Integrity
   - Source Authentication
   - Non-repudiation

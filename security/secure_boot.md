@@ -6,8 +6,8 @@ perspective, this is quite dangerous as it provides no mechanism to protect the
 embedded system from low-level malware and being seized by an adversary. Nearly
 every embedded system requires some level of security to ensure the device
 cannot be easily compromised or tampered with. This is especially true with the
-prolifiration of Internet of Things (IoT) where applications are migrating to
-edge devices. The precense of low-level malware may allow adversaries to steal
+proliferation of Internet of Things (IoT) where applications are migrating to
+edge devices. The presence of low-level malware may allow adversaries to steal
 intellectual property and sensitive data, gain unauthorized access to other
 inter-connected systems, or disrupt business-critical operations.
 
@@ -95,11 +95,11 @@ skinparam nodesep 50
 
 The number of stages required to complete the boot process depends on the
 processor. On microcontrollers, the Boot ROM itself is capable of starting the
-main application reciding in internal flash. However, a separate bootloader is
+main application residing in internal flash. However, a separate bootloader is
 usually required to support updating the main application. On an application
 processor capable of running embedded Linux, a so-called Secondary Program
 Loader (SPL) that fits into On-Chip RAM (OCRAM) is required to initialize
-external RAM before loading and executing the OS loader. The OS loader will then
+external RAM before loading and executing the OS loader (i.e. U-Boot). The OS loader will then
 take care of loading the Linux kernel and its data (i.e. devicetree and
 ramdisk).
 
@@ -129,7 +129,7 @@ skinparam linetype ortho
 ```
 
 Low-level malware targets boot firmware due to its unique role in setting up and
-mainting device hardware security capabilities. If a device allows the precence
+maintaining device hardware security capabilities. If a device allows the presence
 of low-level malware, it may enable adversaries to steal intellectual property,
 credentials and other sensitive or confidential data. Low-level malware may do
 so without leaving an audit trail, allowing the malicious program to run on the
@@ -174,7 +174,7 @@ If a problem is detected during the secure boot process the bootloader halts the
 system from booting further, and may subsequently initiate a recovery process to
 restore the device back to a state of integrity. Recovery mechanisms may include
 loading an older version that was previously known to work or allow recovery
-images to be downladed locally or remotely through an authenticated update
+images to be downloaded locally or remotely through an authenticated update
 mechanism.
 
 ## Root-of-Trust
@@ -243,7 +243,7 @@ security services [7]:
 created, transmitted or stored. Digital signatures rely on a Secure Hash
 Algorithm (SHA) to ensure data is in a state of integrity. SHA's transforms data
 into a unique fixed-length digital fingerprint that is computationally
-infeasibly to forge and replace, thus enabling the secure boot process to detect
+infeasible to forge and replace, thus enabling the secure boot process to detect
 both accidental and intentional data corruption.
 
 **Source Authentication** provides assurance that the data originates from a
@@ -253,7 +253,7 @@ for a firmware image, the image is first hashed using a Secure Hash Algorithm
 resulting signature is then attached to the original firmware image to create a
 signed image. During the signature verification process, the signature is
 decrypted using the corresponding public key. To check whether or not the
-decrypted signature is authentic, the verifiying entity computes its own hash
+decrypted signature is authentic, the verifying entity computes its own hash
 over the original image. If the computed hash matches the result of the
 decrypted signature the verifier is given the assurance that the image is both
 in a state of integrity and originates from a legitimate and trusted source. The
@@ -326,13 +326,13 @@ as performing:
 - Enable hardware isolation through Trusted Execution Environment (TEE)
 
 **Key revocation** is the process of revoking keys on a device whose private key
-countarpart has been compromised. If such a discovery is made, it's important to
+counterpart has been compromised. If such a discovery is made, it's important to
 have a proper plan of action in place to ensure devices can be kept secure as
 compromised keys can be used to "circumvent" the intended function of the secure
 boot process. When a key has been successfully revoked, the key can no longer be
 used to authenticate images signed with the corresponding private key. This also
-affects any backup images that may already recide in device storage memory if
-they were signed with the private key.
+affects any backup images that may already reside in device storage memory if
+they were signed with the compromised private key.
 
 **Rollback protection** ensures earlier versions of an image containing security
 vulnerabilities cannot be executed on the device. Whether or not the rollback
